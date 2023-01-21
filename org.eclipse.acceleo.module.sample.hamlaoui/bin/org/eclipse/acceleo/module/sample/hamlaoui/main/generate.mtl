@@ -1,0 +1,423 @@
+[comment encoding = UTF-8 /]
+[module generate('http://www.example.org/projetMde')]
+
+
+[template public generateApplication(anApplication : Application)]
+[comment @main/]
+[for (boundedContext : BoundedContext | anApplication.boundedContext)]
+[generateBoundedContext(anApplication, boundedContext)/]
+[/for]
+[/template]
+
+[template public generateBoundedContext(anApplication : Application, boundedContext : BoundedContext)]
+[for (microservice : Microservice | boundedContext.microservice)]
+[	generateMicroservice(boundedContext, microservice)/]
+[/for]
+[ / template]
+
+
+
+
+[template public generateMicroservice(boundedContext : BoundedContext, microservice : Microservice)]
+[generateMicroserviceMain(boundedContext, microservice)/]
+[generateMicroserviceDomain(boundedContext, microservice)/]
+[generateApplicationProperties(boundedContext,microservice)/]
+
+[for (entity : Entity | microservice.entity)]
+	[if(entity.mainEntity)]
+	[generateMicroserviceRepository(boundedContext,microservice,entity)/ ]
+	[generateMicroserviceService(boundedContext,microservice,entity)/]
+	[generateMicroserviceController(boundedContext,microservice,entity)/]
+	[/if]
+[/for]
+[comment][generateMicroserviceProperties(boundedContext,microservice)/][/comment]
+[generateMicroservicePom(boundedContext,microservice)/] 
+[/template]
+
+
+[template public generateMicroserviceMain(boundedContext : BoundedContext, microservice : Microservice)] 
+[file (boundedContext.name+'\\src\\main\\java\\' +microservice.properties._package.replaceAll('\\.','\\\\')+'\\' +microservice.name.replaceAll(' ', '_').toLowerCase() +
+'\\'+microservice.name.replaceAll(' ', '_').toLowerCase().toUpperFirst()+'Application.java', false, 'UTF-8')] 
+
+package [microservice.properties._package+'.'+microservice.name.replaceAll(' ', '_').toLowerCase() /]; 
+
+import org.springframework.boot.SpringApplication; 
+import org.springframework.boot.autoconfigure.SpringBootApplication; 
+
+@SpringBootApplication 
+public class [microservice.name.replaceAll(' ', '_').toLowerCase().toUpperFirst()/]Application { 
+
+public static void main(String['['/][']'/] args) { SpringApplication.run([microservice.name.replaceAll(' ', '_').toLowerCase().toUpperFirst()/]Application.class, args); 
+} 
+}
+
+[/file] 
+[/template] 
+
+
+[template public generateMicroserviceDomain(boundedContext : BoundedContext, microservice : Microservice)] 
+[for (entity : Entity | microservice.entity)]
+	[generateMicroserviceEntity(boundedContext,microservice,entity)/] 
+[/for] 
+[for (enum : Enum | microservice.enum)] 
+	[generateMicroserviceEnum(boundedContext,microservice,enum)/] 
+[/for]
+[/template] 
+
+[template public generateMicroserviceEntity(boundedContext : BoundedContext, microservice : Microservice,entity: Entity)]
+[file (boundedContext.name+'\\src\\main\\java\\' +microservice.properties._package.replaceAll('\\.','\\\\')+'\\'
++microservice.name.replaceAll(' ','_').toLowerCase()+'\\'+'models\\'+entity.name.replaceAll(' ', '_').toUpperFirst()+'.java', false, 'UTF-8')]
+package [microservice.properties._package+'.'+microservice.name.replaceAll(' ', '_').toLowerCase()+'.models' /];
+
+[if(entity.field -> exists(type = 'Date'))] 
+import java.util.Date;
+[/if]
+
+[if (entity.mainEntity)]
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue; 
+import javax.persistence.Id;
+
+@Entity
+[else]
+import javax.persistence.Embeddable;
+
+@Embeddable
+[/if]
+public class [entity.name.replaceAll(' ', '_').toUpperFirst()/]
+
+	//variables
+[if (entity.mainEntity)]
+	@Id
+	@GeneratedValue(generator='system-uuid') 
+	private Long id;
+[/if]
+[for(field : Field | entity.field)]
+	[let name: String = field.name ] 
+	[let type: String = field.type ] 
+	[if (field.OneToMany)]
+	@OneToMany(
+            mappedBy = "[entity.name.toString().toLowerFirst()/]",
+			cascade = CascadeType.ALL)
+	[/if]
+
+	[if(field.ManyToOne)]
+	@ManyToOne
+	@JoinColumn(name = "[name.toString() + 'Id' /]")
+	[/if]
+	private [type.toString()/] [name.toString()/];
+	[/let]
+	[/let]
+
+[/for]
+
+	//constructors
+	public [entity.name.toUpperFirst()/](){
+
+	}
+
+	public [entity.name.toUpperFirst()/](
+
+	[for( field : Field | entity.field)]
+		[field.type/] [field.name/][if (not (field = entity.field -> last()))],[/if] [comment]to add a virgule[/comment]
+	[/for]
+
+	){
+	[for( field : Field | entity.field)]
+	 this.[field.name/] = [field.name/]; 
+	[/for]
+	}
+
+		//gets and sets
+	[if (entity.mainEntity)] 
+	public long getld() { 
+	return id;
+	}
+
+	[/if]
+[for(field : Field | entity.field)]
+	[let name: String = field.name ] 
+	[let type: String = field.type ]
+	public [type.toString()/] get[name.toString().toUpperFirst()/]() {
+		return [name.toString()/];
+	}
+
+	public void set[name.toString().toUpperFirst()/]([type.toString()/] [name.toString()/]) {
+		this.[name.toString()/] = [name.toString()/];
+	}
+	[/let]
+	[/let]
+[/for]
+
+}
+[/file]
+[/template]
+
+
+[template public generateMicroserviceEnum(boundedContext : BoundedContext, microservice : Microservice,enum: Enum)]
+[file (boundedContext.name+'\\src\\main\\java\\' +microservice.properties._package.replaceAll('\\.','\\\\')+'\\'+ microservice.name.replaceAll(' ', '_').toLowerCase() +'\\'+'models\\'+enum.name.replaceAll(' ', '_').toUpperFirst()+'.java', false, 'UTF-8')]
+package [microservice.properties._package+'.'+microservice.name.replaceAll(' ','_').toLowerCase()+'.models' /];
+public enum [enum.name.toUpperFirst()/] {
+	[for(value : String | enum.values)]
+	[value.toUpper()/][if (not (value = enum.values -> last()))],[/if]
+	[/for]
+}
+
+
+
+[/file] 
+[/template]
+
+[template public generateMicroserviceRepository(boundedContext : BoundedContext, microservice : Microservice,entity: Entity)]
+[file (boundedContext.name+'\\src\\main\\java\\' +microservice.properties._package.replaceAll('\\.','\\\\')+'\\'+ microservice.name.replaceAll(' ', '_').toLowerCase() +'\\'+'repositories\\'+entity.name.replaceAll(' ', '_')+'Repository.java', false, 'UTF-8')]
+package [microservice.properties._package+'.'+microservice.name.replaceAll(' ','_').toLowerCase()+'.repositories' /];
+
+
+[let className : String = entity.name.replaceAll(' ', '_').toUpperFirst()]
+import [microservice.properties._package+'.'+microservice.name.replaceAll(' ', '_').toLowerCase()+'.models'/].[className/]; 
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface [className/]Repository extends JpaRepository<[className/],Long> {
+
+}
+[/let]
+[/file]
+[/template]
+
+[template public generateMicroserviceService(boundedContext : BoundedContext, microservice : Microservice,entity: Entity)]
+[file (boundedContext.name+'\\src\\main\\java\\' +microservice.properties._package.replaceAll('\\.','\\\\')+'\\'+ microservice.name.replaceAll(' ', '_').toLowerCase() +'\\'+'services\\'+entity.name.replaceAll(' ', '_')+'Service.java', false, 'UTF-8')]
+package [microservice.properties._package+'.' + microservice.name.replaceAll(' ', '_').toLowerCase()+'.services' /];
+[let className : String = entity.name.replaceAll(' ', '_').toUpperFirst()]
+[let entityName : String = className.toLowerFirst()]
+import [microservice.properties._package+'.'+microservice.name.replaceAll(' ', '_').toLowerCase()+'.models'/].[className/];
+import [microservice.properties._package+'.'+microservice.name.replaceAll(' ', '_').toLowerCase()+'.repositories' /].[className/]Repository; 
+import org.springframework.beans.factory.annotation.Autowired;
+import org. springframework.stereotype.Service;
+
+import java.util.List; 
+import java.util.Optional; 
+import java.util.UUID;
+
+@Service
+public class [className/]Service {
+
+	private [className/]Repository [entityName/]Repo;
+	@Autowired
+	public [className/]Service([className/]Repository [entityName/]Repo) { 
+		this.[entityName/]Repo = [entityName/]Repo;
+	}
+
+	public [className/] save[className/]([className/] [entityName/]){ 
+		return [entityName/]Repo.save([entityName/]);
+	}
+	public List<[className/]> getAll[className/](){ 
+		return [entityName/]Repo.findAll();
+	}
+	public Optional<[className/]> get[className/]ById(Long id){ 
+		return [entityName/]Repo.findById(id);
+	}
+
+	public void delete[className/](Long id){ 
+		if(id!=null){
+			if(get[className/]ById(id).isPresent()) 
+				[entityName/]Repo.deleteById(id);
+		}
+	}
+	public [className/] update[className/]([className/] [entityName/]){ 
+		return [entityName/]Repo.save([entityName/]);
+	}
+	}
+	[/let] 
+	[/let]
+	[/file]
+[/template]
+
+
+
+
+
+
+
+
+[template public generateMicroserviceController(boundedContext : BoundedContext, microservice : Microservice,entity: Entity)]
+[file (boundedContext.name+'\\src\\main\\java\\' +microservice.properties._package.replaceAll('\\.','\\\\')+'\\'+ microservice.name.replaceAll(' ', '_').toLowerCase() +'\\' + 'controllers\\' +
+ entity.name.replaceAll(' ', '_')+'Controller.java', false, 'UTF-8')]
+
+package [microservice.properties._package+'.'+microservice.name.replaceAll(' ','_').toLowerCase()+'.controllers' /];
+[let className : String = entity.name.replaceAll(' ', '_').toUpperFirst()]
+[let entityName : String = className.toLowerFirst()]
+import [microservice.properties._package + '.' + microservice.name.replaceAll(' ', '_').toLowerCase()+'.models' /].[className/];
+import [microservice.properties._package+'.'+microservice.name.replaceAll(' ', '_').toLowerCase()+'.services' /].[className/]Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List; 
+import java.util.Optional; 
+import java.util.UUID;
+
+@RequestMapping("/api/[entityName/]") 
+@RestController
+public class [className/]Controller{
+
+	private final [className/]Service [entityName/]Service;
+	@Autowired
+	public [className/]Controller([className/]Service [entityName/]Service) { 
+		this.[entityName/]Service = [entityName/]Service;
+	}
+
+	@PostMapping
+	public [className/] add[className/](@RequestBody [className/] [entityName/]){
+		 return [entityName/]Service.save[className/]([entityName/]);
+	}
+	
+	@GetMapping
+	public List<[className/]> getAll[className/](){
+		 return [entityName/]Service.getAll[className/]();
+	
+}
+	@GetMapping(path = "{id}")
+	public Optional<[className/]> get[className/]ById(@PathVariable("id") Long id){ 
+		return [entityName/]Service.get[className/]ById(id);
+	}
+
+	@PutMapping
+	public [className/] update[className/](@RequestBody [className/] [entityName/]){ 
+		return [entityName/]Service.update[className/]([entityName/]);
+	}
+
+	@DeleteMapping(path = "{id}")
+	public void delete[className/]ById(@PathVariable("id") Long id){ 
+		[entityName/]Service.delete[className/](id);
+	}
+}
+
+
+[/let] 
+[/let] 
+[/file]
+[/template]
+
+[template public generateMicroservicePom(boundedContext : BoundedContext, microservice : Microservice)]
+[file (boundedContext.name + '\\pom.xml', false, 'UTF-8')]
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>3.0.1</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+	<groupId>[microservice.properties._package/]</groupId>
+	<artifactId>[boundedContext.name.replaceAll(' ','_')/]</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>[boundedContext.name.replaceAll(' ','_')/]</name>
+	<description>[boundedContext.name.replaceAll(' ','_')/]</description>
+	<properties>
+		<java.version>17</java.version>
+	</properties>
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-jersey</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+</project>
+[/file]
+[/template]
+
+[template public generateApplicationProperties(boundedContext : BoundedContext , microservice : Microservice)]
+
+[file (boundedContext.name + '\\src\\main\\ressources\\application.properties' , false, 'UTF-8')]
+
+[for (property : Proprety | microservice.properties.proprety)]
+[if(property.name = 'spring.datasource.url')]
+spring.datasource.url = [property.value.replaceAll('"', '')/]
+[/if]
+[if(property.name = 'spring.datasource.username')]
+spring.datasource.username = [property.value.replaceAll('"', '')/]
+[/if]
+[if(property.name = 'spring.datasource.password')]
+spring.datasource.password = [property.value.replaceAll('"', '')/]
+[/if]
+[if(property.name = 'spring.datasource.driver-class-name')]
+spring.datasource.driver-class-name = [property.value.replaceAll('"', '')/]
+[/if]
+[if(property.name = 'spring.jpa.hibernate.ddl-auto')]
+spring.jpa.hibernate.ddl-auto = [property.value.replaceAll('"', '')/]
+[/if]
+[if(property.name = 'spring.jpa.show-sql')]
+spring.jpa.show-sql = [property.value.replaceAll('"', '')/]
+[/if]
+[if(property.name = 'spring.jpa.hibernate.naming-strategy')]
+spring.jpa.hibernate.naming-strategy = [property.value.replaceAll('"', '')/]
+[/if]
+[if(property.name = 'spring.jpa.hibernate.naming-strategy')]
+spring.jpa.hibernate.naming-strategy = [property.value.replaceAll('"', '')/]
+[/if]
+[if(property.name = 'spring.jpa.properties.hibernate.dialect')]
+spring.jpa.properties.hibernate.dialect = [property.value.replaceAll('"', '')/]
+[/if]
+[if(property.name = 'spring.jpa.properties.hibernate.show_sql')]
+spring.jpa.properties.hibernate.show_sql = [property.value.replaceAll('"', '')/]
+[/if]
+[if(property.name = 'spring.jpa.properties.hibernate.use_sql_comments')]
+spring.jpa.properties.hibernate.use_sql_comments = [property.value.replaceAll('"', '')/]
+[/if]
+[if(property.name = 'spring.jpa.properties.hibernate.format_sql')]
+spring.jpa.properties.hibernate.format_sql = [property.value.replaceAll('"', '')/]
+[/if]
+[if(property.name = 'spring.jpa.properties.hibernate.type')]
+spring.jpa.properties.hibernate.type = [property.value.replaceAll('"', '')/]
+[/if]
+[if(property.name = 'spring.jpa.properties.hibernate.enable_lazy_load_no_trans')]
+spring.jpa.properties.hibernate.enable_lazy_load_no_trans = [property.value.replaceAll('"', '')/]
+[/if]
+[if(property.name = 'server.port')]
+server.port = [property.value.replaceAll('"', '')/]
+
+[/if]
+[/for]
+[/file]
+[/template]
+
+
+
+
+
+
+
+
+

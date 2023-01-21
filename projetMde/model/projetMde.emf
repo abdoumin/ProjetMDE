@@ -1,0 +1,66 @@
+@namespace(uri="http://www.example.org/projetMde", prefix="projetMde")
+package projet_hamlaoui;
+
+class Application {
+	attr String[1] name;
+	val BoundedContext[*] boundedcontext;
+}
+
+class BoundedContext {
+	attr String[1] name;
+	val Microservice[*] microservice;
+}
+
+class Microservice {
+	attr String name;
+	val Properties[*] properties;
+	val Entity[*] entity;
+	val Enum[*] ~enum;
+	val Dependencies[*] dependencies;
+}
+
+class Properties {
+	attr String[1] ~package = "com.mde";
+	val Proprety[*] proprety;
+}
+
+class Entity {
+	attr String[1] name;
+	attr boolean[1] create = true;
+	attr boolean[1] read = true;
+	attr boolean[1] update = true;
+	attr boolean[1] delete = true;
+	attr boolean[1] mainEntity = true;
+	val Field[*] field;
+}
+
+class Enum {
+	attr String[*] values;
+	attr String name;
+}
+
+class Dependencies {
+	val Dependency[*] dependency;
+}
+
+class Proprety {
+	attr String[1] name;
+	attr String[1] value;
+}
+
+abstract interface Field {
+	attr String name;
+	attr String type;
+}
+
+class BaseField extends Field {
+}
+
+class SubClass extends Field {
+}
+
+class Dependency {
+}
+
+
+

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.0"?>
+
+<!--
+-->
+
+<plugin>
+
+   <extension point="org.eclipse.ui.newWizards">
+      <!-- @generated projetMde -->
+      <category
+            id="org.eclipse.emf.ecore.Wizard.category.ID"
+            name="%_UI_Wizard_category"/>
+      <wizard
+            id="projet_hamlaoui.presentation.ProjetMdeModelWizardID"
+            name="%_UI_ProjetMdeModelWizard_label"
+            class="projet_hamlaoui.presentation.ProjetMdeModelWizard"
+            category="org.eclipse.emf.ecore.Wizard.category.ID"
+            icon="icons/full/obj16/ProjetMdeModelFile.gif">
+         <description>%_UI_ProjetMdeModelWizard_description</description>
+         <selection class="org.eclipse.core.resources.IResource"/>
+      </wizard>
+   </extension>
+
+   <extension point="org.eclipse.ui.editors">
+      <!-- @generated projetMde -->
+      <editor
+            id="projet_hamlaoui.presentation.ProjetMdeEditorID"
+            name="%_UI_ProjetMdeEditor_label"
+            icon="icons/full/obj16/ProjetMdeModelFile.gif"
+            extensions="projetmde"
+            class="projet_hamlaoui.presentation.ProjetMdeEditor"
+            contributorClass="projet_hamlaoui.presentation.ProjetMdeActionBarContributor">
+      </editor>
+   </extension>
+
+</plugin>
